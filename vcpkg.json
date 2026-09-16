@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "no-public-shouts",
+  "version-string": "1.0.0",
+  "description": "SKSE plugin that blocks genuine shouts in cities, towns and settlements for False Dragonborn roleplay.",
+  "dependencies": [
+    "commonlibsse-ng-fork"
+  ]
+}
