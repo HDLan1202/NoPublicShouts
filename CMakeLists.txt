@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(NoPublicShouts VERSION 1.0.0 LANGUAGES CXX)
+project(NoPublicShouts VERSION 1.0.2 LANGUAGES CXX)
 
 find_package(CommonLibSSE CONFIG REQUIRED)
 
