@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
-  "name": "no-public-shouts",
-  "version-string": "1.0.2",
-  "description": "SKSE plugin that blocks genuine shouts in cities, towns and settlements for False Dragonborn roleplay.",
+  "name": "thorin-dragon-soul-visuals",
+  "version-string": "0.1.0",
+  "description": "Script-free SKSE plugin that redirects vanilla dragon soul absorption visuals from the player to nearby Thorin without changing soul or quest ownership.",
   "dependencies": [
     "commonlibsse-ng-fork"
   ]
