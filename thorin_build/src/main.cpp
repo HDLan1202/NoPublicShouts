@@ -155,23 +155,27 @@ namespace
         bool sawPlayerShader = false;
 
         processLists->ForEachModelEffect(
-            [&](RE::ModelReferenceEffect& a_effect) {
-                if (g_dragonAbsorbEffect &&
-                    a_effect.artObject == g_dragonAbsorbEffect->data.artObject &&
-                    SameRef(a_effect.target, dragon.get()) &&
-                    SameRef(a_effect.aimAtTarget, player)) {
+            [&](RE::ModelReferenceEffect* a_effect) {
+                if (!a_effect) {
+                    return RE::BSContainer::ForEachResult::kContinue;
+                }
 
-                    a_effect.aimAtTarget = targetHandle;
-                    a_effect.UpdatePosition();
+                if (g_dragonAbsorbEffect &&
+                    a_effect->artObject == g_dragonAbsorbEffect->data.artObject &&
+                    SameRef(a_effect->target, dragon.get()) &&
+                    SameRef(a_effect->aimAtTarget, player)) {
+
+                    a_effect->aimAtTarget = targetHandle;
+                    a_effect->UpdatePosition();
                     sawDragonStream = true;
                     SKSE::log::info("Retargeted DragonAbsorbEffect facing target to realdragonborn");
                 }
 
                 if (g_dragonAbsorbManEffect &&
-                    a_effect.artObject == g_dragonAbsorbManEffect->data.artObject &&
-                    SameRef(a_effect.target, player)) {
+                    a_effect->artObject == g_dragonAbsorbManEffect->data.artObject &&
+                    SameRef(a_effect->target, player)) {
 
-                    RetargetModelEffect(a_effect, target, dragon.get());
+                    RetargetModelEffect(*a_effect, target, dragon.get());
                     sawManStream = true;
                     SKSE::log::info("Retargeted DragonAbsorbManEffect from player to realdragonborn");
                 }
@@ -180,12 +184,16 @@ namespace
             });
 
         processLists->ForEachShaderEffect(
-            [&](RE::ShaderReferenceEffect& a_effect) {
-                if (g_dragonPowerAbsorbFXS &&
-                    a_effect.effectData == g_dragonPowerAbsorbFXS &&
-                    SameRef(a_effect.target, player)) {
+            [&](RE::ShaderReferenceEffect* a_effect) {
+                if (!a_effect) {
+                    return RE::BSContainer::ForEachResult::kContinue;
+                }
 
-                    RetargetShaderEffect(a_effect, target);
+                if (g_dragonPowerAbsorbFXS &&
+                    a_effect->effectData == g_dragonPowerAbsorbFXS &&
+                    SameRef(a_effect->target, player)) {
+
+                    RetargetShaderEffect(*a_effect, target);
                     sawPlayerShader = true;
                     SKSE::log::info("Retargeted DragonPowerAbsorbFXS from player to realdragonborn");
                 }
