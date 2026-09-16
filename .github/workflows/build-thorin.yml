@@ -1,0 +1,75 @@
+name: Build ThorinDragonSoulVisuals v0.2.0
+
+on:
+  push:
+    branches:
+      - build-thorin-dragon-soul-visuals
+    paths:
+      - "thorin_build/**"
+      - "ports/**"
+      - ".github/workflows/build-thorin.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Clone isolated vcpkg
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$env:GITHUB_WORKSPACE\vcpkg-local"
+          & "$env:GITHUB_WORKSPACE\vcpkg-local\bootstrap-vcpkg.bat" -disableMetrics
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S thorin_build -B build-thorin -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/vcpkg-local/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_OVERLAY_PORTS="$env:GITHUB_WORKSPACE/ports"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build-thorin --config Release
+
+      - name: Locate DLL
+        shell: pwsh
+        run: |
+          $dll = Get-ChildItem -Path build-thorin -Filter ThorinDragonSoulVisuals.dll -Recurse | Select-Object -First 1
+          if (-not $dll) { throw "ThorinDragonSoulVisuals.dll was not produced" }
+          "DLL_PATH=$($dll.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "DLL: $($dll.FullName)"
+
+      - name: Package MO2 mod
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package/SKSE/Plugins | Out-Null
+          Copy-Item "$env:DLL_PATH" package/SKSE/Plugins/ThorinDragonSoulVisuals.dll
+          @"
+          ThorinDragonSoulVisuals v0.2.0
+          Target EditorID: realdragonborn
+          Fallback runtime RefFormID: 0x250050CE
+          Radius: 6000
+          Watch window: 22 seconds
+
+          This plugin changes only the vanilla dragon-soul absorption visual effects.
+          Player DragonSouls and vanilla quest progression are intentionally untouched.
+          "@ | Set-Content -Path package/README.txt -Encoding UTF8
+          Compress-Archive -Path package/* -DestinationPath ThorinDragonSoulVisuals_v0.2.0_MO2.zip -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ThorinDragonSoulVisuals-v0.2.0
+          path: ThorinDragonSoulVisuals_v0.2.0_MO2.zip
+          if-no-files-found: error
