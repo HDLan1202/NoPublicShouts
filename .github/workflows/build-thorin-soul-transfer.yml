@@ -1,0 +1,78 @@
+name: Build Thorin Soul Transfer v1.0.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ thorin-soul-transfer ]
+    paths:
+      - ".github/workflows/build-thorin-soul-transfer.yml"
+      - "ThorinSoulTransfer/**"
+      - "ports/**"
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable MSVC developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Bootstrap isolated vcpkg
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP "ThorinSoulTransfer-vcpkg"
+          if (Test-Path $root) {
+            Remove-Item -Recurse -Force $root
+          }
+          git clone --depth 1 https://github.com/microsoft/vcpkg.git $root
+          & "$root/bootstrap-vcpkg.bat" -disableMetrics
+          "VCPKG_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S ThorinSoulTransfer -B build-thorin -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md `
+            "-DVCPKG_OVERLAY_PORTS=$env:GITHUB_WORKSPACE/ports"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build-thorin --config Release --parallel
+
+      - name: Verify DLL
+        shell: pwsh
+        run: |
+          $dll = Get-ChildItem -Path build-thorin -Filter ThorinSoulTransfer.dll -Recurse | Select-Object -First 1
+          if (-not $dll) {
+            Get-ChildItem -Path build-thorin -Recurse | Select-Object FullName
+            throw "ThorinSoulTransfer.dll was not produced."
+          }
+          Write-Host "Built DLL: $($dll.FullName)"
+          Write-Host "DLL size: $($dll.Length) bytes"
+
+      - name: Create MO2 package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package/SKSE/Plugins | Out-Null
+          $dll = Get-ChildItem -Path build-thorin -Filter ThorinSoulTransfer.dll -Recurse | Select-Object -First 1
+          if (-not $dll) { throw "ThorinSoulTransfer.dll was not produced." }
+          Copy-Item $dll.FullName package/SKSE/Plugins/ThorinSoulTransfer.dll
+          Copy-Item ThorinSoulTransfer/README.md package/README_ThorinSoulTransfer.txt
+          Compress-Archive -Path package/* -DestinationPath ThorinSoulTransfer_v1.0.0_MO2.zip -Force
+
+      - name: Upload MO2 ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ThorinSoulTransfer-v1.0.0-MO2
+          path: ThorinSoulTransfer_v1.0.0_MO2.zip
+          if-no-files-found: error
