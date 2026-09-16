@@ -2,7 +2,11 @@
 
 namespace
 {
-    constexpr std::string_view kNotification = "I can't shout in front of these people.";
+    constexpr std::array<std::string_view, 3> kNotifications{
+        "If Thorin hears about this, I'm dead."sv,
+        "I can't shout in front of these people."sv,
+        "I don't want to end up in the torture room again."sv
+    };
 
     constexpr std::array<std::string_view, 3> kBlockedLocationKeywordIDs{
         "LocTypeCity"sv,
@@ -13,6 +17,13 @@ namespace
     std::array<RE::BGSKeyword*, kBlockedLocationKeywordIDs.size()> g_blockedKeywords{};
     bool g_locationKeywordsReady = false;
     bool g_hookInstalled = false;
+
+    [[nodiscard]] std::string_view GetRandomNotification()
+    {
+        static std::mt19937 rng{ std::random_device{}() };
+        static std::uniform_int_distribution<std::size_t> distribution{ 0, kNotifications.size() - 1 };
+        return kNotifications[distribution(rng)];
+    }
 
     void ResolveLocationKeywords()
     {
@@ -63,7 +74,8 @@ namespace
         {
             if (a_event && ShouldBlockCurrentShout()) {
                 if (a_event->IsDown()) {
-                    RE::DebugNotification(kNotification.data(), nullptr, true);
+                    const auto notification = GetRandomNotification();
+                    RE::DebugNotification(notification.data(), nullptr, true);
                 }
                 return;
             }
