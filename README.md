@@ -1,41 +1,40 @@
-# NoPublicShouts
+# Thorin Dragon Soul Visuals
 
-A tiny SKSE plugin for **False Dragonborn roleplay**.
+False Dragonborn RP SKSE/CommonLibSSE-NG plugin. No Papyrus scripts and no ESP.
 
-When the player has a genuine Dragon Shout equipped and is inside a location tagged as a city, town, or settlement, the shout input is blocked before vanilla shout execution and the HUD shows:
+## Behaviour
 
-> I can't shout in front of these people.
+When a dragon dies, if a loaded actor named `Thorin` or `Throin` is within the configured radius:
 
-## Scope
+- the real player remains the vanilla `AbsorbActor`;
+- the player still receives the dragon soul normally;
+- quest stages and quest-dragon handling remain vanilla;
+- the dragon-side streaming VFX is recreated facing Thorin;
+- the absorber-side streaming VFX is removed from the player and recreated on Thorin;
+- vanilla `DragonPowerAbsorbFXS` (`Skyrim.esm:000280C0`) is removed from the player and recreated on Thorin.
 
-Blocked location keywords:
-- `LocTypeCity`
-- `LocTypeTown`
-- `LocTypeSettlement`
+It does **not** patch `DragonActorScript.pex`, `MQKillDragonScript.pex`, AI packages, Thorin's actor record, DragonSouls, or quest stages.
 
-Parent locations are checked as well, so interiors such as shops, inns, palaces, and homes inherit the city/town/settlement restriction.
+If Thorin is not nearby when the dragon dies, vanilla visuals are untouched.
 
-The mod intentionally does **not** use `LocTypeHabitation`, avoiding overly broad blocking of isolated farms and inns.
+## Install
 
-## Design
+Install the generated MO2 ZIP. Requirements are the usual SKSE64 + Address Library requirements for CommonLibSSE-NG plugins.
 
-- SKSE/CommonLibSSE-NG plugin
-- No ESP/ESL
-- No Papyrus
-- No quest edits
-- No save serialization
-- Only genuine `TESShout` use is blocked; powers sharing the same input are left alone
+Optional configuration: `Data/SKSE/Plugins/ThorinDragonSoulVisuals.ini`.
 
-## Build
+## Default settings
 
-GitHub Actions builds the plugin on Windows and publishes an MO2-ready artifact:
+- `Radius=6000`
+- `VisualWindowSeconds=22`
+- `Names=Thorin,Throin`
 
-`NoPublicShouts_FalseDragonborn_MO2.zip`
+## Test
 
-Its structure is:
+1. Put Thorin beside the player.
+2. Kill a normal dragon.
+3. The dragon corpse should burn normally, but the streaming/man/shader absorb visuals should appear on/fly to Thorin.
+4. Check the player's Dragon Souls count: it should still increase exactly as vanilla.
+5. Test Mirmulnir / a quest dragon on a backup save: quest progression should remain vanilla because this DLL does not change `AbsorbActor` or any quest state.
 
-```text
-SKSE/
-  Plugins/
-    NoPublicShouts.dll
-```
+Log: `Documents/My Games/Skyrim Special Edition/SKSE/ThorinDragonSoulVisuals.log`.
