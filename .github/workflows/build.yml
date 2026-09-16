@@ -1,0 +1,56 @@
+name: Build SKSE Plugin
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable MSVC developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Clone vcpkg
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git C:/vcpkg
+          C:/vcpkg/bootstrap-vcpkg.bat -disableMetrics
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config Release
+
+      - name: Create MO2 package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package/SKSE/Plugins | Out-Null
+          $dll = Get-ChildItem -Path build -Filter NoPublicShouts.dll -Recurse | Select-Object -First 1
+          if (-not $dll) { throw "NoPublicShouts.dll was not produced." }
+          Copy-Item $dll.FullName package/SKSE/Plugins/NoPublicShouts.dll
+          Compress-Archive -Path package/* -DestinationPath NoPublicShouts_FalseDragonborn_MO2.zip -Force
+
+      - name: Upload MO2 ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: NoPublicShouts-FalseDragonborn-MO2
+          path: NoPublicShouts_FalseDragonborn_MO2.zip
+          if-no-files-found: error
