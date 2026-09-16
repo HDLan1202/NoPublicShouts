@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "thorin-soul-transfer",
+  "version-string": "1.0.0",
+  "description": "Script-free SKSE plugin that redirects visible dragon soul absorption from the player to nearby Thorin while preserving vanilla soul and quest logic.",
+  "dependencies": [
+    "commonlibsse-ng-fork"
+  ]
+}
