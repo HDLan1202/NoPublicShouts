@@ -1,0 +1,5 @@
+build/
+package/
+.vs/
+CMakeUserPresets.json
+*.pdb
