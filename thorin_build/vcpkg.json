@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "thorin-dragon-soul-visuals",
+  "version-string": "0.2.0",
+  "description": "Retarget vanilla dragon soul absorption visuals to realdragonborn without changing player soul mechanics.",
+  "dependencies": [
+    "commonlibsse-ng-fork"
+  ]
+}
