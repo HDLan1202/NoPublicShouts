@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(NoPublicShouts VERSION 1.0.2 LANGUAGES CXX)
+project(ThorinDragonSoulVisuals VERSION 0.1.0 LANGUAGES CXX)
 
-# CommonLibSSE exports link-interface targets that are not imported by its
-# generated config automatically, so load them before CommonLibSSE.
 find_package(spdlog CONFIG REQUIRED)
 find_package(directxmath CONFIG REQUIRED)
 find_package(directxtk CONFIG REQUIRED)
@@ -11,7 +9,7 @@ find_package(CommonLibSSE CONFIG REQUIRED)
 
 add_commonlibsse_plugin(
     ${PROJECT_NAME}
-    NAME "No Public Shouts - False Dragonborn RP"
+    NAME "Thorin Dragon Soul Visuals - False Dragonborn RP"
     AUTHOR "HDLan1202"
     VERSION ${PROJECT_VERSION}
     SOURCES
