@@ -1,4 +1,4 @@
-name: Build ThorinDragonSoulVisuals v0.2.0
+name: Build ThorinDragonSoulVisuals v0.2.0 Static Fix
 
 on:
   push:
@@ -20,6 +20,8 @@ jobs:
 
       - name: Configure MSVC
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@master
@@ -27,28 +29,41 @@ jobs:
       - name: Clone isolated vcpkg
         shell: pwsh
         run: |
-          git clone https://github.com/microsoft/vcpkg.git "$env:GITHUB_WORKSPACE\vcpkg-local"
-          & "$env:GITHUB_WORKSPACE\vcpkg-local\bootstrap-vcpkg.bat" -disableMetrics
+          $root = Join-Path $env:RUNNER_TEMP "ThorinDragonSoulVisuals-vcpkg"
+          if (Test-Path $root) {
+            Remove-Item -Recurse -Force $root
+          }
+          git clone --depth 1 https://github.com/microsoft/vcpkg.git $root
+          & "$root/bootstrap-vcpkg.bat" -disableMetrics
+          "VCPKG_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Configure
+      - name: Configure static dependencies
         shell: pwsh
         run: |
           cmake -S thorin_build -B build-thorin -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/vcpkg-local/scripts/buildsystems/vcpkg.cmake" `
-            -DVCPKG_OVERLAY_PORTS="$env:GITHUB_WORKSPACE/ports"
+            "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md `
+            "-DVCPKG_OVERLAY_PORTS=$env:GITHUB_WORKSPACE/ports"
 
       - name: Build
         shell: pwsh
-        run: cmake --build build-thorin --config Release
+        run: cmake --build build-thorin --config Release --parallel
 
-      - name: Locate DLL
+      - name: Locate and verify DLL
         shell: pwsh
         run: |
           $dll = Get-ChildItem -Path build-thorin -Filter ThorinDragonSoulVisuals.dll -Recurse | Select-Object -First 1
           if (-not $dll) { throw "ThorinDragonSoulVisuals.dll was not produced" }
-          "DLL_PATH=$($dll.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "DLL_PATH=$($dll.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "DLL: $($dll.FullName)"
+          Write-Host "DLL size: $($dll.Length) bytes"
+
+          $imports = (& dumpbin /DEPENDENTS $dll.FullName) | Out-String
+          Write-Host $imports
+          if ($imports -match '(?im)^\s*(spdlog|fmt)\.dll\s*$') {
+            throw "Build still depends on external spdlog.dll or fmt.dll; static-link fix failed."
+          }
 
       - name: Package MO2 mod
         shell: pwsh
@@ -56,20 +71,23 @@ jobs:
           New-Item -ItemType Directory -Force -Path package/SKSE/Plugins | Out-Null
           Copy-Item "$env:DLL_PATH" package/SKSE/Plugins/ThorinDragonSoulVisuals.dll
           @"
-          ThorinDragonSoulVisuals v0.2.0
+          ThorinDragonSoulVisuals v0.2.0 - Static Dependency Fix
           Target EditorID: realdragonborn
           Fallback runtime RefFormID: 0x250050CE
           Radius: 6000
           Watch window: 22 seconds
 
+          Fix: fmt/spdlog are now linked statically into the plugin.
+          The mod no longer relies on another mod or game folder providing fmt.dll/spdlog.dll.
+
           This plugin changes only the vanilla dragon-soul absorption visual effects.
           Player DragonSouls and vanilla quest progression are intentionally untouched.
           "@ | Set-Content -Path package/README.txt -Encoding UTF8
-          Compress-Archive -Path package/* -DestinationPath ThorinDragonSoulVisuals_v0.2.0_MO2.zip -Force
+          Compress-Archive -Path package/* -DestinationPath ThorinDragonSoulVisuals_v0.2.0_STATIC_FIX_MO2.zip -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ThorinDragonSoulVisuals-v0.2.0
-          path: ThorinDragonSoulVisuals_v0.2.0_MO2.zip
+          name: ThorinDragonSoulVisuals-v0.2.0-static-fix
+          path: ThorinDragonSoulVisuals_v0.2.0_STATIC_FIX_MO2.zip
           if-no-files-found: error
